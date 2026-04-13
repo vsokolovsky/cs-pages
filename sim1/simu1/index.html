@@ -1,1 +1,415 @@
 
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>סימולטור פולימורפיזם - הידור מול ריצה (גרסה מורחבת)</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --text-color: #2c3e50;
+            --code-bg: #1e1e1e;
+            --primary: #0984e3;
+            --primary-hover: #74b9ff;
+            --success: #00b894;
+            --success-bg: #e8f8f5;
+            --error: #d63031;
+            --error-bg: #fadbd8;
+            --disabled: #bdc3c7;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .page-layout {
+            display: flex;
+            flex-direction: row;
+            gap: 25px;
+            width: 100%;
+            max-width: 1200px;
+            align-items: flex-start;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            flex: 1;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .top-header {
+            text-align: center;
+            padding: 10px 20px 30px;
+        }
+
+        h1 { margin: 0; font-size: 28px; color: var(--primary); }
+        p.subtitle { margin: 10px 0 0 0; color: #7f8c8d; font-size: 16px; }
+
+        /* אזור הקוד בצד */
+        .code-reference {
+            background-color: var(--code-bg);
+            color: #d4d4d4;
+            padding: 25px;
+            border-radius: 12px;
+            direction: ltr;
+            text-align: left;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13.5px;
+            line-height: 1.5;
+            width: 320px;
+            flex-shrink: 0;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            border-top: 5px solid var(--primary);
+            white-space: pre-wrap; 
+        }
+
+        .kw { color: #569cd6; } /* מילות מפתח */
+        .type { color: #4ec9b0; } /* מחלקות */
+        .str { color: #ce9178; } /* מחרוזות */
+        .modifier { color: #c586c0; } /* הרשאות גישה */
+
+        /* אזור בניית הקוד */
+        .builder-section {
+            padding: 25px;
+            background-color: #fdfdfd;
+        }
+
+        .code-builder {
+            background-color: #2d3436;
+            padding: 20px;
+            border-radius: 8px;
+            direction: ltr;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 18px;
+            color: #f1f2f6;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .code-line {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        select {
+            background-color: #353b48;
+            color: #55efc4;
+            border: 1px solid #718093;
+            padding: 6px 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            outline: none;
+            transition: 0.2s;
+        }
+        select:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(9, 132, 227, 0.3); }
+
+        .btn-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 35px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        button:hover { background-color: var(--primary-hover); transform: translateY(-2px); }
+        button:active { transform: translateY(0); }
+
+        /* אזור התוצאות */
+        .results-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 25px;
+            background-color: #ffffff;
+            border-top: 1px solid #eee;
+        }
+
+        .panel {
+            padding: 15px 20px;
+            border-radius: 8px;
+            border: 2px solid #ecf0f1;
+            transition: all 0.3s ease;
+        }
+
+        .panel h3 {
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .output-box {
+            background-color: #fff;
+            border: 1px solid rgba(0,0,0,0.1);
+            padding: 12px;
+            border-radius: 5px;
+            font-family: 'Consolas', monospace;
+            font-size: 15px;
+            direction: ltr;
+            text-align: left;
+            min-height: 24px;
+        }
+
+        .explanation {
+            margin-top: 10px;
+            font-size: 15px;
+            line-height: 1.5;
+            color: #555;
+        }
+
+        /* מצבים צבעוניים */
+        .panel.success { border-color: var(--success); background-color: var(--success-bg); }
+        .panel.success h3 { color: #009432; }
+        
+        .panel.error { border-color: var(--error); background-color: var(--error-bg); }
+        .panel.error h3 { color: #b33939; }
+        
+        .panel.disabled { border-color: var(--disabled); background-color: #f5f6fa; opacity: 0.7; }
+        .panel.disabled h3 { color: #7f8c8d; }
+
+    </style>
+</head>
+<body>
+
+    <div class="top-header">
+        <h1>בוחן קומפיילר מול זמן ריצה</h1>
+        <p class="subtitle">הסתכל על קוד המחלקות בצד, בנה שורות בסימולטור, ובדוק האם הקוד מתקמפל ורץ כראוי.</p>
+    </div>
+
+    <div class="page-layout">
+        <div class="code-reference"><span class="kw">class</span> <span class="type">Animal</span> {
+    <span class="modifier">protected</span> <span class="kw">int</span> age;
+    
+    <span class="modifier">public</span> <span class="kw">void</span> makeNoise() { 
+        System.out.println(<span class="str">"Generic sound"</span>); 
+    }
+}
+
+<span class="kw">class</span> <span class="type">Cat</span> <span class="kw">extends</span> <span class="type">Animal</span> {
+    <span class="modifier">private</span> <span class="kw">boolean</span> isWild;
+    
+    <span class="modifier">public</span> <span class="kw">void</span> scratch() { 
+        System.out.println(<span class="str">"Scratch!"</span>); 
+    }
+    
+    <span class="modifier">@Override</span>
+    <span class="modifier">public</span> <span class="kw">void</span> makeNoise() { 
+        System.out.println(<span class="str">"Meow!"</span>); 
+    }
+}
+
+<span class="kw">class</span> <span class="type">Dog</span> <span class="kw">extends</span> <span class="type">Animal</span> {
+    <span class="modifier">private</span> <span class="type">String</span> breed;
+    
+    <span class="modifier">public</span> <span class="kw">void</span> fetch() { 
+        System.out.println(<span class="str">"Fetch!"</span>); 
+    }
+    
+    <span class="modifier">@Override</span>
+    <span class="modifier">public</span> <span class="kw">void</span> makeNoise() { 
+        System.out.println(<span class="str">"Woof!"</span>); 
+    }
+}</div>
+
+        <div class="container">
+            <div class="builder-section">
+                <div class="code-builder">
+                    <div class="code-line">
+                        <select id="refSelect">
+                            <option value="Animal">Animal</option>
+                            <option value="Cat">Cat</option>
+                            <option value="Dog">Dog</option>
+                        </select>
+                        <span>myPet</span>
+                        <span style="color: #ff7675;">=</span>
+                        <span class="kw">new</span>
+                        <select id="objSelect">
+                            <option value="Animal">Animal</option>
+                            <option value="Cat">Cat</option>
+                            <option value="Dog">Dog</option>
+                        </select>
+                        <span>();</span>
+                    </div>
+                    <div class="code-line">
+                        <span>myPet.</span>
+                        <select id="methodSelect">
+                            <option value="makeNoise">makeNoise()</option>
+                            <option value="scratch">scratch()</option>
+                            <option value="fetch">fetch()</option>
+                        </select>
+                        <span>;</span>
+                    </div>
+                </div>
+            
+                <div class="btn-container">
+                    <button onclick="runSimulation()">הרץ קוד >></button>
+                </div>
+            </div>
+
+            <div class="results-section">
+            
+                <div id="compilerPanel" class="panel">
+                    <h3><span id="compilerIcon">⚙️</span> בדיקת קומפיילר (Compile Time)</h3>
+                    <div class="output-box" id="compilerOutput">Waiting for execution...</div>
+                    <div class="explanation" id="compilerExplanation">
+                        הקומפיילר מסתכל תמיד על סוג <strong>ההפניה</strong> (המשתנה מצד שמאל) כדי לקבוע מה חוקי.
+                    </div>
+                </div>
+
+                <div id="jvmPanel" class="panel disabled">
+                    <h3><span id="jvmIcon">☕</span> ביצוע בזמן ריצה (Run Time)</h3>
+                    <div class="output-box" id="jvmOutput">Not running yet.</div>
+                    <div class="explanation" id="jvmExplanation">
+                        ה-JVM ניגשת ל<strong>עצם עצמו בזיכרון</strong> (צד ימין) כדי לבצע את הפעולה.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function runSimulation() {
+            const refType = document.getElementById('refSelect').value;
+            const objType = document.getElementById('objSelect').value;
+            const methodCall = document.getElementById('methodSelect').value;
+
+            const compilerPanel = document.getElementById('compilerPanel');
+            const compilerOutput = document.getElementById('compilerOutput');
+            const compilerExp = document.getElementById('compilerExplanation');
+            const compilerIcon = document.getElementById('compilerIcon');
+
+            const jvmPanel = document.getElementById('jvmPanel');
+            const jvmOutput = document.getElementById('jvmOutput');
+            const jvmExp = document.getElementById('jvmExplanation');
+            const jvmIcon = document.getElementById('jvmIcon');
+
+            // --- 1. בדיקות קומפילציה (זמן הידור) ---
+            
+            let isAssignValid = true;
+            let assignErrorStr = "";
+            let assignErrorExp = "";
+
+            // חוקי השמה (Upcasting/Downcasting)
+            if (refType === 'Cat' && objType !== 'Cat') {
+                isAssignValid = false;
+                assignErrorStr = "Incompatible types: " + objType + " cannot be converted to Cat";
+                assignErrorExp = `אי אפשר להכניס <code>${objType}</code> לתוך הפניה מסוג <code>Cat</code> ללא המרה מפורשת.`;
+            } else if (refType === 'Dog' && objType !== 'Dog') {
+                isAssignValid = false;
+                assignErrorStr = "Incompatible types: " + objType + " cannot be converted to Dog";
+                assignErrorExp = `אי אפשר להכניס <code>${objType}</code> לתוך הפניה מסוג <code>Dog</code>.`;
+            }
+
+            let isMethodValid = true;
+            let methodErrorStr = "";
+            let methodErrorExp = "";
+
+            // חוקי פעולות (האם קיימות בהפניה)
+            if (methodCall === 'scratch' && refType !== 'Cat') {
+                isMethodValid = false;
+                methodErrorStr = "Cannot resolve method scratch() in class " + refType;
+                methodErrorExp = `הקומפיילר רואה הפניה מסוג <code>${refType}</code>, ובמחלקה זו לא מוגדרת הפעולה scratch().`;
+            } else if (methodCall === 'fetch' && refType !== 'Dog') {
+                isMethodValid = false;
+                methodErrorStr = "Cannot resolve method fetch() in class " + refType;
+                methodErrorExp = `הקומפיילר רואה הפניה מסוג <code>${refType}</code>, ובמחלקה זו לא מוגדרת הפעולה fetch().`;
+            }
+
+            // סיכום קומפילציה
+            let compilePass = isAssignValid && isMethodValid;
+
+            if (!compilePass) {
+                compilerPanel.className = 'panel error';
+                compilerIcon.innerText = '❌';
+                
+                if (!isAssignValid) {
+                    compilerOutput.innerHTML = `<span style="color: #c0392b;">Compilation Error: ${assignErrorStr}</span>`;
+                    compilerExp.innerHTML = `<strong>שגיאת קומפילציה: סוגים לא תואמים.</strong> ${assignErrorExp}`;
+                } else {
+                    compilerOutput.innerHTML = `<span style="color: #c0392b;">Compilation Error: ${methodErrorStr}</span>`;
+                    compilerExp.innerHTML = `<strong>שגיאת קומפילציה: הפעולה לא נמצאה.</strong> ${methodErrorExp} הקומפיילר חוסם את הגישה אפילו אם בזיכרון קיים עצם שיודע לבצע אותה!`;
+                }
+
+                // כיבוי JVM
+                jvmPanel.className = 'panel disabled';
+                jvmIcon.innerText = '🛑';
+                jvmOutput.innerText = "Process finished with exit code 1 (Did not run)";
+                jvmExp.innerHTML = "הקומפילציה נכשלה. לא נוצר עצם בזיכרון והתוכנית לא רצה.";
+                return;
+            }
+
+            // קומפילציה עברה בהצלחה
+            compilerPanel.className = 'panel success';
+            compilerIcon.innerText = '✔️';
+            compilerOutput.innerHTML = '<span style="color: #27ae60;">Build Successful</span>';
+            compilerExp.innerHTML = `<strong>הקומפילציה הצליחה!</strong> ההשמה חוקית (מותר להכניס <code>${objType}</code> לתוך <code>${refType}</code>), והפעולה <code>${methodCall}()</code> קיימת ב"משקפיים" של <code>${refType}</code>.`;
+
+            // --- 2. שלב הריצה (JVM) ---
+            
+            jvmPanel.className = 'panel success';
+            jvmIcon.innerText = '🚀';
+
+            if (methodCall === 'scratch') {
+                jvmOutput.innerText = "> Scratch!";
+                jvmExp.innerHTML = "ה-JVM ניגש לחתול שבזיכרון ומפעיל את הפעולה הייחודית שלו.";
+            } 
+            else if (methodCall === 'fetch') {
+                jvmOutput.innerText = "> Fetch!";
+                jvmExp.innerHTML = "ה-JVM ניגש לכלב שבזיכרון ומפעיל את הפעולה הייחודית שלו.";
+            }
+            else if (methodCall === 'makeNoise') {
+                if (objType === 'Animal') {
+                    jvmOutput.innerText = "> Generic sound";
+                    jvmExp.innerHTML = "העצם בזיכרון הוא <code>Animal</code> רגיל, לכן מופעלת פעולת ה-makeNoise המקורית של מחלקת האב.";
+                } else if (objType === 'Cat') {
+                    jvmOutput.innerText = "> Meow!";
+                    if (refType === 'Animal') {
+                        jvmExp.innerHTML = "<strong>פולימורפיזם בפעולה!</strong> למרות שההפניה היא <code>Animal</code>, ה-JVM מזהה שהעצם האמיתי בזיכרון הוא <code>Cat</code>, ומפעיל את הפעולה ה<strong>דורסת (Overridden)</strong> שלו.";
+                    } else {
+                        jvmExp.innerHTML = "הפעולה הדורסת של העצם <code>Cat</code> הופעלה.";
+                    }
+                } else if (objType === 'Dog') {
+                    jvmOutput.innerText = "> Woof!";
+                    if (refType === 'Animal') {
+                        jvmExp.innerHTML = "<strong>פולימורפיזם בפעולה!</strong> למרות שההפניה היא <code>Animal</code>, ה-JVM מזהה שהעצם האמיתי בזיכרון הוא <code>Dog</code>, ומפעיל את הפעולה ה<strong>דורסת (Overridden)</strong> שלו.";
+                    } else {
+                        jvmExp.innerHTML = "הפעולה הדורסת של העצם <code>Dog</code> הופעלה.";
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
